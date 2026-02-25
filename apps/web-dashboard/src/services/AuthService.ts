@@ -1,3 +1,4 @@
+import { post } from './Api';
 
 export interface User {
   id: string;
@@ -70,6 +71,16 @@ class AuthService {
     junctionId?: string;
     badgeNumber?: string;
   }): Promise<AuthResponse> {
+    // if backend URL is provided, send request there
+    if (process.env.REACT_APP_API_URL) {
+      try {
+        const result = await post<AuthResponse>('/api/auth/signup', userData);
+        return result;
+      } catch (e) {
+        return { success: false, message: (e as Error).message };
+      }
+    }
+
     const existingUser = this.users.find(
       u => u.username === userData.username || u.email === userData.email
     );
@@ -129,6 +140,19 @@ class AuthService {
 
   // Updated to accept an object to match SigninPage usage and generic credential check
   async signin(credentials: { username: string; password: string }): Promise<AuthResponse> {
+    if (process.env.REACT_APP_API_URL) {
+      try {
+        const result = await post<AuthResponse>('/api/auth/signin', credentials);
+        if (result.success && result.user) {
+          localStorage.setItem('docent_current_user', JSON.stringify(result.user));
+          this.currentUser = result.user;
+        }
+        return result;
+      } catch (e) {
+        return { success: false, message: (e as Error).message };
+      }
+    }
+
     const user = this.users.find(
       u => (u.username === credentials.username || u.email === credentials.username) && u.password === credentials.password
     );
