@@ -1,8 +1,0 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Custom LifeLink styles */
-.lifelink-gradient {
-  background: linear-gradient(135deg, #66BB6A 0%, #64B5F6 100%);
-}
