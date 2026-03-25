@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc;
 using WebDashboardBackend.Models;
 using WebDashboardBackend.Data;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +26,10 @@ namespace WebDashboardBackend.Controllers
             user.Id = Guid.NewGuid().ToString();
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
-            return Ok(new { success = true, message = "Account created successfully", user = user });
+            var resultUser = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
+            if (resultUser != null) resultUser.Password = string.Empty;
+            
+            return Ok(new { success = true, message = "Account created successfully", user = resultUser });
         }
 
         [HttpPost("signin")]
@@ -40,7 +42,37 @@ namespace WebDashboardBackend.Controllers
             {
                 return Unauthorized(new { success = false, message = "Invalid credentials" });
             }
-            return Ok(new { success = true, message = "Signed in successfully", user = new { user.Id, user.Username, user.Email, user.UserType } });
+            
+            // Set online status
+            user.IsOnline = true;
+            await _db.SaveChangesAsync();
+            
+            // Omit password from response
+            user.Password = string.Empty;
+            
+            return Ok(new { success = true, message = "Signed in successfully", user = user });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] User resetReq)
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == resetReq.Username && u.UserType == resetReq.UserType);
+            if (user == null) return NotFound(new { success = false, message = "User not found" });
+
+            user.Password = resetReq.Password;
+            await _db.SaveChangesAsync();
+            return Ok(new { success = true, message = "Password reset successfully" });
+        }
+
+        [HttpDelete("user/{id}")]
+        public async Task<IActionResult> DeleteUser(string id)
+        {
+            var user = await _db.Users.FindAsync(id);
+            if (user == null) return NotFound(new { success = false, message = "User not found" });
+
+            _db.Users.Remove(user);
+            await _db.SaveChangesAsync();
+            return Ok(new { success = true, message = "User deleted successfully" });
         }
 
         [HttpGet("status")]

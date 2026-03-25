@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using WebDashboardBackend.Models;
+using System.Text.Json;
 
 namespace WebDashboardBackend.Data
 {
@@ -10,13 +11,34 @@ namespace WebDashboardBackend.Data
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<Hospital> Hospitals { get; set; }
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<AmbulanceStatus> AmbulanceStatuses { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            // configure entity properties if needed
+
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.Property(u => u.AssignedPatientIds)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                        v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>());
+
+                entity.Property(u => u.Permissions)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                        v => JsonSerializer.Deserialize<UserPermissions>(v, (JsonSerializerOptions?)null));
+            });
+
+            modelBuilder.Entity<Hospital>(entity =>
+            {
+                entity.Property(h => h.AmbulanceIds)
+                    .HasConversion(
+                        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                        v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>());
+            });
         }
     }
 }

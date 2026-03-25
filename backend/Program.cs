@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using WebDashboardBackend.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // add configuration from json

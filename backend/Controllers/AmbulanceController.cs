@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using WebDashboardBackend.Models;
+using WebDashboardBackend.Data;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace WebDashboardBackend.Controllers
 {
@@ -7,15 +10,42 @@ namespace WebDashboardBackend.Controllers
     [Route("api/[controller]")]
     public class AmbulanceController : ControllerBase
     {
-        // GET api/ambulance/status
-        [HttpGet("status")]
-        public IActionResult GetAmbulanceStatus()
+        private readonly AppDbContext _db;
+
+        public AmbulanceController(AppDbContext db)
         {
-            // return dummy status for now
-            var status = new AmbulanceStatus { Id = 1, Location = "37.7749,-122.4194", Available = true };
-            return Ok(status);
+            _db = db;
         }
 
-        // other ambulance-related endpoints (e.g., location updates) can be added
+        [HttpGet("status/{hospitalId}")]
+        public async Task<IActionResult> GetAmbulances(string hospitalId)
+        {
+            var fleet = await _db.AmbulanceStatuses
+                .Where(a => a.HospitalId == hospitalId)
+                .ToListAsync();
+            return Ok(fleet);
+        }
+
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdateStatus([FromBody] AmbulanceStatus status)
+        {
+            var existing = await _db.AmbulanceStatuses.FirstOrDefaultAsync(a => a.Registration == status.Registration);
+            if (existing == null)
+            {
+                _db.AmbulanceStatuses.Add(status);
+            }
+            else
+            {
+                existing.Location = status.Location;
+                existing.Available = status.Available;
+                existing.IsOnline = status.IsOnline;
+                existing.StaffName = status.StaffName;
+                existing.SpO2 = status.SpO2;
+                existing.HeartRate = status.HeartRate;
+                existing.BatteryLevel = status.BatteryLevel;
+            }
+            await _db.SaveChangesAsync();
+            return Ok(new { success = true, message = "Ambulance status updated" });
+        }
     }
 }
