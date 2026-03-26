@@ -73,6 +73,30 @@ namespace WebDashboardBackend.Controllers
             return Ok(new { success = true, message = "Password reset successfully" });
         }
 
+        [HttpGet("patients/{doctorId}")]
+        public async Task<IActionResult> GetPatientsByDoctor(string doctorId)
+        {
+            var patients = await _db.Users
+                .Where(u => u.DoctorId == doctorId && u.UserType == "patient")
+                .ToListAsync();
+            
+            // Omit passwords
+            foreach(var p in patients) p.Password = string.Empty;
+            
+            return Ok(patients);
+        }
+
+        [HttpGet("doctors")]
+        public async Task<IActionResult> GetAllDoctors()
+        {
+            var doctors = await _db.Users
+                .Where(u => u.UserType == "doctor")
+                .ToListAsync();
+            
+            foreach (var d in doctors) d.Password = string.Empty;
+            return Ok(doctors);
+        }
+
         [HttpDelete("user/{id}")]
         public async Task<IActionResult> DeleteUser(string id)
         {
