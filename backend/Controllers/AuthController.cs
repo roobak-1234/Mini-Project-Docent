@@ -24,6 +24,15 @@ namespace WebDashboardBackend.Controllers
                 return Conflict(new { success = false, message = "Username or email already exists" });
             }
             user.Id = Guid.NewGuid().ToString();
+
+            if (user.UserType == "doctor" && string.IsNullOrEmpty(user.UniqueDoctorId))
+            {
+                var random = new Random();
+                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString().Substring(6);
+                var randNum = random.Next(100, 999).ToString();
+                user.UniqueDoctorId = $"DR-{timestamp}-{randNum}";
+            }
+
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
             var resultUser = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
