@@ -13,10 +13,19 @@ builder.Services.AddSwaggerGen();
 // configure database context (MySQL)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
+// Hardcode the version to bypass the startup "ping" crash
+var serverVersion = new MySqlServerVersion(new Version(8, 0, 32)); 
+
 builder.Services.AddDbContext<WebDashboardBackend.Data.AppDbContext>(options =>
 {
-    options.UseMySql(connectionString,
-        ServerVersion.AutoDetect(connectionString));
+    options.UseMySql(connectionString, serverVersion, mysqlOptions =>
+    {
+        // This helps handle the latency between Central India and East Asia
+        mysqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null);
+    });
 });
 
 // MVC, CORS
