@@ -53,12 +53,9 @@ app.Lifetime.ApplicationStarted.Register(() =>
     Console.WriteLine("Web-dashboard-backend has started and is listening for requests.");
 });
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
+app.UseSwagger();
+app.UseSwaggerUI();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
