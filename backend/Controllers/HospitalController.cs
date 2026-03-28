@@ -68,6 +68,8 @@ namespace WebDashboardBackend.Controllers
             hospital.IcuBeds = updatedHospital.IcuBeds;
             hospital.OxygenStock = updatedHospital.OxygenStock;
             hospital.AmbulanceIds = updatedHospital.AmbulanceIds;
+            hospital.Latitude = updatedHospital.Latitude;
+            hospital.Longitude = updatedHospital.Longitude;
 
             await _db.SaveChangesAsync();
             return Ok(new { success = true, message = "Hospital updated successfully", hospital = hospital });

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Users, ArrowLeft, User, Mail, Phone, UserCheck, Truck, Trash2 } from 'lucide-react';
+import { Building2, Users, ArrowLeft, User, Mail, Phone, UserCheck, Truck, Trash2, Calendar, MonitorPlay } from 'lucide-react';
 import { authService } from '../services/AuthService';
 import { hospitalService } from '../services/hospitalService';
+import AppointmentManagement from './AppointmentManagement';
+import LiveCameraDashboard from './LiveCameraDashboard';
 
 interface HospitalManagementProps {
   onBack: () => void;
@@ -13,6 +15,7 @@ const HospitalManagement: React.FC<HospitalManagementProps> = ({ onBack, onRegis
   const [hospitalInfo, setHospitalInfo] = useState<any>(null);
   const [hospitalStaff, setHospitalStaff] = useState<any[]>([]);
   const [doctorPatients, setDoctorPatients] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'staff' | 'fleet' | 'appointments' | 'monitor'>('staff');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -167,7 +170,45 @@ const HospitalManagement: React.FC<HospitalManagementProps> = ({ onBack, onRegis
           </div>
         </div>
 
-        {/* Hospital Staff */}
+        {/* Tab Bar */}
+        <div className="flex gap-0 border-b border-gray-100 mb-6 overflow-x-auto">
+          {([
+            { key: 'staff' as const, label: 'Hospital Staff', Icon: Users },
+            { key: 'fleet' as const, label: 'Ambulance Fleet', Icon: Truck },
+            { key: 'appointments' as const, label: 'Appointments', Icon: Calendar },
+            { key: 'monitor' as const, label: 'Live Monitor', Icon: MonitorPlay },
+          ]).map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-2 px-5 py-3.5 text-sm font-bold border-b-2 whitespace-nowrap transition-all ${
+                activeTab === key
+                  ? 'border-lifelink-primary text-lifelink-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon className="h-4 w-4" />{label}
+              {key === 'appointments' && (
+                <span className="bg-green-100 text-green-700 text-[9px] font-black px-1.5 py-0.5 rounded-full">ONLINE</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'appointments' && (
+          <AppointmentManagement
+            hospitalId={hospitalInfo.uniqueHospitalId}
+            hospitalName={hospitalInfo.name}
+          />
+        )}
+
+        {activeTab === 'monitor' && (
+          <div className="-mt-4">
+            <LiveCameraDashboard onBack={() => setActiveTab('staff')} />
+          </div>
+        )}
+
+        {activeTab === 'staff' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-lifelink-text flex items-center gap-2">
@@ -368,8 +409,9 @@ const HospitalManagement: React.FC<HospitalManagementProps> = ({ onBack, onRegis
             </div>
           )}
         </div>
+        )}
 
-        {/* Ambulance Fleet */}
+        {activeTab === 'fleet' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-lifelink-text flex items-center gap-2">
@@ -443,6 +485,7 @@ const HospitalManagement: React.FC<HospitalManagementProps> = ({ onBack, onRegis
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );

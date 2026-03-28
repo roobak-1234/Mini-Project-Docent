@@ -16,6 +16,10 @@ namespace WebDashboardBackend.Models
         public int IcuBeds { get; set; }
         public int OxygenStock { get; set; }
         public List<string> AmbulanceIds { get; set; } = new List<string>();
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
         public string AdminContact { get; set; } = string.Empty; // the doctor who registered it
+        public bool AppointmentEnabled { get; set; } = false;
+        public string AppointmentSettings { get; set; } = string.Empty; // JSON
     }
 }
