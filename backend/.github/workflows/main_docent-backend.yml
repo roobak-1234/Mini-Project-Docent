@@ -55,6 +55,17 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6EE3A3ECF62747CEBF861FCB1D03A2AE }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A78123B721E84AD2A1160DDFF5EC1A05 }}
 
+      - name: Configure Azure Web App settings
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az webapp config appsettings set \
+              --name docent-backend \
+              --resource-group ${{ secrets.AZURE_BACKEND_RESOURCE_GROUP }} \
+              --settings \
+                ConnectionStrings__DefaultConnection='${{ secrets.BACKEND_DB_CONNECTION_STRING }}' \
+                ASPNETCORE_ENVIRONMENT='Production'
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
