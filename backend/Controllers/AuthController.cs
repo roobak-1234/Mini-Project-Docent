@@ -25,6 +25,17 @@ namespace WebDashboardBackend.Controllers
             {
                 return Conflict(new { success = false, message = "Username or email already exists" });
             }
+
+            if ((user.UserType == "doctor" || user.UserType == "staff" || user.UserType == "nurse")
+                && !string.IsNullOrWhiteSpace(user.DoctorId))
+            {
+                var hospitalExists = await _db.Hospitals.AnyAsync(h => h.UniqueHospitalId == user.DoctorId);
+                if (!hospitalExists)
+                {
+                    return BadRequest(new { success = false, message = "Invalid hospital ID" });
+                }
+            }
+
             user.Id = Guid.NewGuid().ToString();
 
             if (user.UserType == "doctor" && string.IsNullOrEmpty(user.UniqueDoctorId))

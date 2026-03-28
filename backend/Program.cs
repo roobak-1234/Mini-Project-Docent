@@ -3,15 +3,16 @@ using WebDashboardBackend.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// add configuration from json
-builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
 // Add services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // configure database context (MySQL)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException(
+        "Connection string 'DefaultConnection' is missing. Configure it in appsettings.Development.json for local runs or Azure App Service settings for deployment.");
 
 // Hardcode the version to bypass the startup "ping" crash
 var serverVersion = new MySqlServerVersion(new Version(8, 0, 32)); 
@@ -57,34 +58,14 @@ app.Lifetime.ApplicationStarted.Register(() =>
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+var webRootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+if (Directory.Exists(webRootPath))
+{
+    app.UseStaticFiles();
+}
 app.UseRouting();
 app.UseCors("AllowReact");
 app.UseAuthorization();
 app.MapControllers();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

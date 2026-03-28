@@ -11,7 +11,7 @@ namespace WebDashboardBackend.Models
         public string? Phone { get; set; }
         public string? DoctorId { get; set; }
         public string? UniqueDoctorId { get; set; }
-        public string UserType { get; set; } = "patient"; // 'doctor' | 'patient' | 'nurse' | 'staff'
+        public string UserType { get; set; } = "patient"; // 'doctor' | 'patient' | 'nurse' | 'staff' | 'hospitalAdmin'
         public string? Country { get; set; }
         public string? MedicalId { get; set; }
         public string? StaffType { get; set; }

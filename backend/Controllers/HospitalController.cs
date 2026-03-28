@@ -16,6 +16,16 @@ namespace WebDashboardBackend.Controllers
             _db = db;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var hospitals = await _db.Hospitals
+                .OrderByDescending(h => h.Id)
+                .ToListAsync();
+
+            return Ok(hospitals);
+        }
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] Hospital hospital)
         {
@@ -48,7 +58,7 @@ namespace WebDashboardBackend.Controllers
         public async Task<IActionResult> GetStaff(string hospitalId)
         {
             var staff = await _db.Users
-                .Where(u => u.DoctorId == hospitalId && (u.UserType == "staff" || u.UserType == "nurse"))
+                .Where(u => u.DoctorId == hospitalId && (u.UserType == "staff" || u.UserType == "nurse" || u.UserType == "doctor"))
                 .ToListAsync();
             return Ok(staff);
         }
