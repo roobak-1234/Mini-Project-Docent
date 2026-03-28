@@ -16,6 +16,15 @@ namespace WebDashboardBackend.Controllers
             _db = db;
         }
 
+        private static readonly HashSet<string> ValidAppointmentStatuses = new() { "Pending", "Confirmed", "Cancelled", "Completed" };
+        private static readonly Dictionary<string, HashSet<string>> AllowedTransitions = new()
+        {
+            ["Pending"]   = new() { "Confirmed", "Cancelled" },
+            ["Confirmed"] = new() { "Completed", "Cancelled" },
+            ["Completed"] = new(),
+            ["Cancelled"] = new(),
+        };
+
         // ──────────────────────────────────────────────────────────────────────
         // HOSPITAL ADMIN: Enable / configure appointment booking
         // POST /api/appointments/enable-hospital
@@ -23,17 +32,21 @@ namespace WebDashboardBackend.Controllers
         [HttpPost("enable-hospital")]
         public async Task<IActionResult> EnableHospital([FromBody] EnableAppointmentRequest req)
         {
+            if (string.IsNullOrWhiteSpace(req.UniqueHospitalId))
+                return BadRequest(new { success = false, message = "Hospital ID is required" });
+
             var hospital = await _db.Hospitals
                 .FirstOrDefaultAsync(h => h.UniqueHospitalId == req.UniqueHospitalId);
 
             if (hospital == null)
                 return NotFound(new { success = false, message = "Hospital not found" });
 
-            hospital.AppointmentEnabled = true;
-            hospital.AppointmentSettings = req.SettingsJson;
+            hospital.AppointmentEnabled = !req.Disable;
+            hospital.AppointmentSettings = req.Disable ? "{}" : req.SettingsJson;
             await _db.SaveChangesAsync();
 
-            return Ok(new { success = true, message = "Appointment booking enabled", hospital });
+            var msg = req.Disable ? "Appointment booking disabled" : "Appointment booking enabled";
+            return Ok(new { success = true, message = msg, hospital });
         }
 
         // ──────────────────────────────────────────────────────────────────────
@@ -78,8 +91,15 @@ namespace WebDashboardBackend.Controllers
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateStatusRequest req)
         {
+            if (!ValidAppointmentStatuses.Contains(req.Status))
+                return BadRequest(new { success = false, message = "Invalid status value" });
+
             var appt = await _db.Appointments.FindAsync(id);
-            if (appt == null) return NotFound(new { success = false, message = "Appointment not found" });
+            if (appt == null)
+                return NotFound(new { success = false, message = "Appointment not found" });
+
+            if (!AllowedTransitions.TryGetValue(appt.Status, out var allowed) || !allowed.Contains(req.Status))
+                return BadRequest(new { success = false, message = $"Cannot transition from {appt.Status} to {req.Status}" });
 
             appt.Status = req.Status;
             await _db.SaveChangesAsync();
@@ -93,7 +113,14 @@ namespace WebDashboardBackend.Controllers
         [HttpPost]
         public async Task<IActionResult> BookAppointment([FromBody] Appointment appointment)
         {
-            // Verify hospital is enabled
+            if (string.IsNullOrWhiteSpace(appointment.PatientId) ||
+                string.IsNullOrWhiteSpace(appointment.PatientName) ||
+                string.IsNullOrWhiteSpace(appointment.UniqueHospitalId))
+                return BadRequest(new { success = false, message = "Patient details and hospital ID are required" });
+
+            if (appointment.AppointmentDate < DateTime.UtcNow.Date)
+                return BadRequest(new { success = false, message = "Appointment date cannot be in the past" });
+
             var hospital = await _db.Hospitals
                 .FirstOrDefaultAsync(h => h.UniqueHospitalId == appointment.UniqueHospitalId);
 
@@ -102,6 +129,16 @@ namespace WebDashboardBackend.Controllers
 
             if (!hospital.AppointmentEnabled)
                 return BadRequest(new { success = false, message = "This hospital has not enabled online appointment booking" });
+
+            // Prevent duplicate booking: same patient, same hospital, same date
+            var duplicate = await _db.Appointments.AnyAsync(a =>
+                a.PatientId == appointment.PatientId &&
+                a.UniqueHospitalId == appointment.UniqueHospitalId &&
+                a.AppointmentDate.Date == appointment.AppointmentDate.Date &&
+                a.Status != "Cancelled");
+
+            if (duplicate)
+                return Conflict(new { success = false, message = "You already have an appointment at this hospital on that date" });
 
             appointment.Status = "Pending";
             appointment.CreatedAt = DateTime.UtcNow;
@@ -133,6 +170,9 @@ namespace WebDashboardBackend.Controllers
         [HttpGet("search")]
         public async Task<IActionResult> SearchHospitals([FromQuery] string q = "")
         {
+            if (q.Length > 100)
+                return BadRequest(new { success = false, message = "Search query too long" });
+
             var hospitals = await _db.Hospitals
                 .Where(h => h.AppointmentEnabled &&
                     (string.IsNullOrEmpty(q) || h.Name.Contains(q) || h.Address.Contains(q)))
@@ -158,6 +198,7 @@ namespace WebDashboardBackend.Controllers
     {
         public string UniqueHospitalId { get; set; } = string.Empty;
         public string SettingsJson { get; set; } = "{}";
+        public bool Disable { get; set; } = false;
     }
 
     public class UpdateStatusRequest

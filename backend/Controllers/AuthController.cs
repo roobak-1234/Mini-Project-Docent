@@ -7,6 +7,8 @@ namespace WebDashboardBackend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Route("[controller]")]
+    [Route("api/api/[controller]")]
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _db;

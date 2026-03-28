@@ -15,6 +15,7 @@ namespace WebDashboardBackend.Data
         public DbSet<ChatMessage> ChatMessages { get; set; }
         public DbSet<AmbulanceStatus> AmbulanceStatuses { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
+        public DbSet<LeaveApplication> LeaveApplications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
