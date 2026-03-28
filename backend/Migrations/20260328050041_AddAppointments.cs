@@ -12,11 +12,28 @@ namespace WebDashboardBackend.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Idempotent column additions for MySQL 8.0.21+
-            migrationBuilder.Sql("ALTER TABLE `Hospitals` ADD COLUMN IF NOT EXISTS `AppointmentEnabled` tinyint(1) NOT NULL DEFAULT FALSE;");
-            migrationBuilder.Sql("ALTER TABLE `Hospitals` ADD COLUMN IF NOT EXISTS `AppointmentSettings` longtext NULL;");
-            migrationBuilder.Sql("ALTER TABLE `Hospitals` ADD COLUMN IF NOT EXISTS `Latitude` double NOT NULL DEFAULT 0.0;");
-            migrationBuilder.Sql("ALTER TABLE `Hospitals` ADD COLUMN IF NOT EXISTS `Longitude` double NOT NULL DEFAULT 0.0;");
+            // Robust stored procedure approach for MySQL to handle idempotent column additions
+            migrationBuilder.Sql(@"
+                DROP PROCEDURE IF EXISTS AddColumnIfNotExists;
+                CREATE PROCEDURE AddColumnIfNotExists(IN tableName VARCHAR(255), IN columnName VARCHAR(255), IN columnDefinition VARCHAR(255))
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+                        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = tableName AND COLUMN_NAME = columnName
+                    ) THEN
+                        SET @sql = CONCAT('ALTER TABLE `', tableName, '` ADD COLUMN `', columnName, '` ', columnDefinition);
+                        PREPARE stmt FROM @sql;
+                        EXECUTE stmt;
+                        DEALLOCATE PREPARE stmt;
+                    END IF;
+                END;
+            ");
+
+            migrationBuilder.Sql("CALL AddColumnIfNotExists('Hospitals', 'AppointmentEnabled', 'tinyint(1) NOT NULL DEFAULT 0');");
+            migrationBuilder.Sql("CALL AddColumnIfNotExists('Hospitals', 'AppointmentSettings', 'longtext NULL');");
+            migrationBuilder.Sql("CALL AddColumnIfNotExists('Hospitals', 'Latitude', 'double NOT NULL DEFAULT 0.0');");
+            migrationBuilder.Sql("CALL AddColumnIfNotExists('Hospitals', 'Longitude', 'double NOT NULL DEFAULT 0.0');");
+            migrationBuilder.Sql("DROP PROCEDURE IF EXISTS AddColumnIfNotExists;");
 
             // Idempotent table creation
             migrationBuilder.Sql(@"
